@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { Axios, AxiosInstance } from "axios";
 import WebSocket from "ws";
 import { orderToWire, orderWireToAction, signL1Action } from "./signing";
 import { ethers, Wallet } from "ethers";
@@ -14,21 +14,23 @@ import {
 import "dotenv/config";
 
 class Chase {
-  private http = axios.create({
-    baseURL: "https://api.hyperliquid-testnet.xyz",
-    headers: { "Content-Type": "application/json" },
-  });
+  private http: AxiosInstance;
   private ws: WebSocket;
   private bestPrice: number = -1;
   private aid: number = -1;
   private oid: number | null = null;
-  private orderRequest: OrderRequest;
+  private order: OrderRequest;
   private wallet: Wallet;
   private modifying = false;
 
   constructor(private coin: string, private size: number, private side: Side) {
     const privateKey = process.env.PRIVATE_KEY;
     this.wallet = new ethers.Wallet(privateKey!);
+
+    this.http = axios.create({
+      baseURL: "https://api.hyperliquid-testnet.xyz",
+      headers: { "Content-Type": "application/json" },
+    });
 
     this.ws = new WebSocket("wss://api.hyperliquid-testnet.xyz/ws");
     this.ws.onopen = () => {
@@ -56,7 +58,7 @@ class Chase {
       console.log("WebSocket closed");
     };
 
-    this.orderRequest = {
+    this.order = {
       coin: "BTC",
       is_buy: this.side == 0,
       sz: this.size,
@@ -95,15 +97,7 @@ class Chase {
     console.log(orders[0]);
     console.log(lastPrice, parseFloat(orders[0].px));
 
-    // Get filled method
-    // this.bestBid = parseFloat(asks[0].px) - 10;
-    // if (this.oid && lastBid != this.bestBid) {
-    //   this.updateOrder();
-    //   return;
-    // }
-
     if ((this.oid, orders[0].n == 1 && lastPrice == parseFloat(orders[0].px))) {
-      console.log("you have the best price!");
       this.bestPrice = parseFloat(orders[1].px);
       this.updateOrder();
       return;
@@ -175,9 +169,9 @@ class Chase {
   }
 
   buildOrder() {
-    this.orderRequest.sz = this.size;
-    this.orderRequest.limit_px = this.bestPrice!;
-    return orderToWire(this.orderRequest, this.aid);
+    this.order.sz = this.size;
+    this.order.limit_px = this.bestPrice!;
+    return orderToWire(this.order, this.aid);
   }
 
   async placeOrder() {
