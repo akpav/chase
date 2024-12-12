@@ -123,21 +123,19 @@ class Chase {
     return { coin: this.coin, size: this.size, side: this.side };
   }
 
-  getOrders() {
-    this.http
-      .post("/info", {
-        type: "openOrders",
-        user: process.env.PUBLIC_KEY,
-      })
-      .then((res) => {
-        if (res.data.length > 1) {
-          return;
-        } else if (res.data.length == 0) {
-          this.ws.close();
-          return;
-        }
-        this.oid = res.data[0].oid;
-      });
+  async getOrders() {
+    const res = await this.http.post("/info", {
+      type: "openOrders",
+      user: process.env.PUBLIC_KEY,
+    });
+
+    if (res.data.length == 1) {
+      this.oid = res.data[0].oid;
+      return;
+    } else if (res.data.length == 0) {
+      this.ws.close();
+      return;
+    }
   }
 
   async getBook() {
